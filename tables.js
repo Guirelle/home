@@ -97,7 +97,7 @@ const MATIERE = (() => {
     for (let i = 0; i < 25; i++) {
       let ty = force;
       if (!ty) { const ks = Object.keys(W).filter(x => x !== o.eviter); let r = Math.random() * ks.reduce((s, x) => s + W[x], 0); ty = ks.find(x => (r -= W[x]) < 0) || ks[0]; }
-      try { const q = GEN[ty](t, o); q.theme = t; q.genre = ty; return q; } catch (e) { if (force && i > 8) force = null; }
+      try { const q = GEN[ty](t, o); q.theme = t; q.genre = ty; if (q.type === "saisie") q.nombre = +q.ok[0]; return q; } catch (e) { if (force && i > 8) force = null; }
     }
     throw new Error("génération impossible");
   }

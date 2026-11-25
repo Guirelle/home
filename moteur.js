@@ -260,14 +260,22 @@ const Moteur = (() => {
     const [av, ap] = contexte(q), j = (...x) => norm(x.filter(Boolean).join(" ").replace(/' /g, "'"));
     return [j(av, r, ap), j(av, r), j(r, ap)].includes(v);
   }
+  /* Lit un nombre tapé : accepte −3, -3, (−3), ( -3 ), +5, (+5), 2,5 ou 2.5 ; sinon null */
+  function lireNombre(txt) {
+    let b = String(txt).replace(/\s/g, "").replace(/[−–—]/g, "-").replace(",", ".");
+    while (/^\(.*\)$/.test(b)) b = b.slice(1, -1);
+    if (/^\+/.test(b)) b = b.slice(1);
+    if (!/^-?([0-9]+\.?[0-9]*|\.[0-9]+)$/.test(b)) return null;
+    return parseFloat(b);
+  }
   function verifier() {
     if (fbOuvert) return;
     const q = S.liste[S.i]; let ok;
     if (q.type === "saisie") {
       const inp = $("input.rep"); let v = norm(inp.value); if (!v) { inp.focus(); return; }
       if (q.nombre !== undefined) {
-        const brut = inp.value.replace(/\s/g, "").replace(/[−–—]/g, "-").replace(",", "."), x = parseFloat(brut);
-        ok = !isNaN(x) && /^-?[0-9]*\.?[0-9]*$/.test(brut) && Math.abs(x - q.nombre) < 1e-9;
+        const x = lireNombre(inp.value);
+        ok = x !== null && Math.abs(x - q.nombre) < 1e-9;
         inp.classList.add(ok ? "ok-in" : "ko-in"); correction(ok, q); return;
       }
       if (q.avant) { const a = norm(q.avant); if (v.startsWith(a + " ")) v = v.slice(a.length + 1); else if (a.endsWith("'") && v.startsWith(a)) v = v.slice(a.length); }
@@ -462,7 +470,7 @@ const Moteur = (() => {
     if (d.acc !== undefined) { insere(d.acc); return; }
     if (d.l !== undefined) { if (b.classList.contains("fait") || fbOuvert) return; cur.relSel = +d.l; $$("[data-l]").forEach(x => x.classList.toggle("sel", x === b)); return; }
     if (d.r !== undefined) { relier(b); return; }
-    if ("pm" in d) { const i = $("input.rep"); if (i) { const v = i.value.trim(); i.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, "") : "−" + v; i.focus(); } return; }
+    if ("pm" in d) { const i = $("input.rep"); if (i) { const v = i.value.trim().replace(/^\((.*)\)$/, "$1").trim(); i.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, "") : "−" + v; i.focus(); } return; }
     if ("check" in d) { verifier(); return; }
     if ("next" in d) { suivant(); return; }
     if ("rejouer" in d) { demarrer(S.themes); return; }
@@ -523,5 +531,5 @@ const Moteur = (() => {
     addEventListener("hashchange", route);
     route();
   }
-  return { init, norm, shuffle, rnd, _debug: () => ({ S, M }), _accepte: accepte };
+  return { init, norm, shuffle, rnd, _debug: () => ({ S, M }), _accepte: accepte, _lireNombre: lireNombre };
 })();
