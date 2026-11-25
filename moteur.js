@@ -9,6 +9,33 @@
 const Moteur = (() => {
   let M = null, S = null, F = null, onglet = "seul", choix = new Set(), son = true;
   let cur = {}, fbOuvert = false, dernierInput = null;
+  /* sablier : "non" ou une vitesse ; durées de base par type (une matière peut fournir M.duree(q)) */
+  let sablier = "non", chrono = null;
+  const VITESSES = { non: ["⏸️", "Sans sablier", 0], lent: ["🐢", "Tranquille", 1.6], normal: ["🐇", "Normal", 1], rapide: ["🚀", "Rapide", 0.6] };
+  function dureeBase(q) {
+    if (M.duree) { const d = M.duree(q); if (d) return d; }
+    return { qcm: 15, vf: 10, saisie: 25, tableau: 8 * (q.lignes ? q.lignes.length : 6) + 5, relier: 6 * (q.paires ? q.paires.length : 4) + 4 }[q.type] || 20;
+  }
+  function arreterChrono() { if (chrono) { cancelAnimationFrame(chrono.raf); chrono = null; } }
+  function lancerChrono(q) {
+    arreterChrono(); if (sablier === "non") return;
+    const total = dureeBase(q) * VITESSES[sablier][2] * 1000, t0 = performance.now();
+    chrono = { total, t0, raf: 0 };
+    const pas = () => {
+      if (!chrono || fbOuvert) return;
+      const reste = Math.max(0, 1 - (performance.now() - t0) / total), b = $(".vie .vbar>div"), n = $(".vie .sec");
+      if (b) { b.style.width = (reste * 100) + "%"; b.parentNode.parentNode.className = "vie " + (reste > .5 ? "v-ok" : reste > .25 ? "v-moy" : "v-bas"); }
+      if (n) n.textContent = Math.ceil(reste * total / 1000) + " s";
+      if (reste <= 0) { chrono = null; tempsEcoule(q); return; }
+      chrono.raf = requestAnimationFrame(pas);
+    };
+    chrono.raf = requestAnimationFrame(pas);
+  }
+  function tempsEcoule(q) {
+    if (fbOuvert) return;
+    $$(".card input, .card button").forEach(x => x.disabled = true);
+    correction(false, q, true);
+  }
 
   /* ---------- utilitaires ---------- */
   const $ = (s, r = document) => r.querySelector(s);
@@ -108,7 +135,7 @@ const Moteur = (() => {
   /* ---------- routeur ---------- */
   function route() {
     const h = decodeURIComponent(location.hash.slice(1));
-    fermerFb(); fermerModal();
+    fermerFb(); fermerModal(); arreterChrono();
     if (h.startsWith("synthese/")) vueSynthese(h.slice(9));
     else if (h === "syntheses") vueSyntheses();
     else if (h === "fiche") vueFiche();
@@ -122,7 +149,8 @@ const Moteur = (() => {
   function vueMenu() {
     let h = entete() + `<main class="wrap">
       <div class="tabs"><button class="${onglet === "seul" ? "on" : ""}" data-tab="seul">🎯 ${M.libSeul || "Un seul thème"}</button>
-      <button class="${onglet === "mix" ? "on" : ""}" data-tab="mix">🎲 Mélange</button></div>`;
+      <button class="${onglet === "mix" ? "on" : ""}" data-tab="mix">🎲 Mélange</button></div>
+      <div class="sablier"><span>⏳ Sablier :</span>${Object.entries(VITESSES).map(([k, v]) => `<button class="${sablier === k ? "on" : ""}" data-sab="${k}">${v[0]} ${v[1]}</button>`).join("")}</div>`;
     if (onglet === "seul") {
       M.groupes.forEach(g => {
         h += `<h2 class="grp" style="--c:${g.c}">${g.nom}</h2><div class="tiles">`;
@@ -178,13 +206,15 @@ const Moteur = (() => {
       <div class="qtop"><button class="x" data-quit title="Quitter">✕</button>
       <div class="bar"><div style="width:${100 * S.i / S.liste.length}%"></div></div>
       <span class="cpt">${S.i + 1} / ${S.liste.length}</span></div>
+      ${sablier !== "non" ? `<div class="vie v-ok"><span class="ic">⏳</span><div class="vbar"><div></div></div><span class="sec"></span></div>` : ""}
       <div class="infos"><span>✅ ${S.justes}</span><span class="flamme">${S.serie >= 2 ? "🔥 série de " + S.serie : ""}</span><span>❌ ${S.fautes}</span></div>
       <div class="card" style="--c:${c}"><div class="consigne">${q.consigne}</div>`;
     h += rendu(q) + `</div>`;
-    if (q.type !== "relier") h += `<button class="btn" data-check>Vérifier</button>`;
+    if (!["relier", "qcm", "vf"].includes(q.type)) h += `<button class="btn" data-check>Vérifier</button>`;
     h += `</main>`;
     app().innerHTML = h;
     const inp = $("input.rep"); if (inp) inp.focus({ preventScroll: true });
+    lancerChrono(q);
   }
 
   const ACC = ["é", "è", "ê", "à", "â", "ç", "î", "ï", "ô", "û", "ù", "ë", "'"];
@@ -245,9 +275,11 @@ const Moteur = (() => {
     correction(ok, q);
   }
 
-  function correction(ok, q) {
+  function correction(ok, q, horsTemps) {
     if (!S || location.hash !== "#jeu" || S.liste[S.i] !== q) return; // partie quittée entre-temps
-    fbOuvert = true;
+    fbOuvert = true; arreterChrono();
+    if (q.type === "qcm") $$("[data-opt]").forEach(x => { const bon = q.bonne.includes(q.options[+x.dataset.opt]); x.classList.add(bon ? "bon" : (x.classList.contains("sel") ? "mauvais" : "eteint")); x.disabled = true; });
+    if (q.type === "vf") $$("[data-vf]").forEach(x => { const bon = (x.dataset.vf === "1") === q.bonne; x.classList.add(bon ? "bon" : (x.classList.contains("sel") ? "mauvais" : "eteint")); x.disabled = true; });
     const fb = $("#fb"), th = M.themes[q.theme], c = couleurTheme(q.theme);
     let h = `<div class="in">`;
     if (ok) {
@@ -258,7 +290,8 @@ const Moteur = (() => {
       bip(true); confettis($("[data-check]") || $(".card"));
     } else {
       S.fautes++; S.serie = 0;
-      h += `<h3>Oups ! 😬</h3><p><b>Bonne réponse :</b> ${q.solution || ""}</p>`;
+      h += horsTemps ? `<h3>⏰ Temps écoulé !</h3>` : `<h3>Oups ! 😬</h3>`;
+      h += `<p><b>Bonne réponse :</b> ${q.solution || ""}</p>`;
       h += `<div class="rappel" style="--c:${c}">📘 <b>Rappel – ${th.nom}</b><br>${th.rappel}</div>`;
       if (q.astuce) h += `<p>💡 ${q.astuce}</p>`;
       h += `<p><button class="lien" data-synmodal="${q.theme}">Voir la feuille de synthèse complète</button></p>`;
@@ -385,8 +418,9 @@ const Moteur = (() => {
     if ("mix" in d) { const ordre = M.groupes.flatMap(g => g.t).filter(t => choix.has(t)); if (ordre.length) demarrer(ordre); return; }
     if ("fichemix" in d) { const ordre = M.groupes.flatMap(g => g.t).filter(t => choix.has(t)); if (ordre.length) preparerFiche(ordre); return; }
     if ("quit" in d) { if (confirm("Quitter la partie ?")) { S = null; aller(""); } return; }
-    if (d.opt !== undefined) { cur.sel = +d.opt; $$("[data-opt]").forEach(x => x.classList.toggle("sel", x === b)); return; }
-    if (d.vf !== undefined) { cur.sel = d.vf; $$("[data-vf]").forEach(x => x.classList.toggle("sel", x === b)); return; }
+    if (d.opt !== undefined) { if (fbOuvert) return; cur.sel = +d.opt; $$("[data-opt]").forEach(x => x.classList.toggle("sel", x === b)); verifier(); return; }
+    if (d.vf !== undefined) { if (fbOuvert) return; cur.sel = d.vf; $$("[data-vf]").forEach(x => x.classList.toggle("sel", x === b)); verifier(); return; }
+    if (d.sab) { sablier = d.sab; store.set("sablier", sablier); vueMenu(); return; }
     if (d.acc !== undefined) { insere(d.acc); return; }
     if (d.l !== undefined) { if (b.classList.contains("fait") || fbOuvert) return; cur.relSel = +d.l; $$("[data-l]").forEach(x => x.classList.toggle("sel", x === b)); return; }
     if (d.r !== undefined) { relier(b); return; }
@@ -426,6 +460,7 @@ const Moteur = (() => {
     document.documentElement.style.setProperty("--m-f", M.couleurFoncee || M.couleur);
     document.title = M.titre + " – Mon coin d'étude";
     son = store.get("son", true);
+    sablier = store.get("sablier", "non"); if (!VITESSES[sablier]) sablier = "non";
     onglet = store.get(M.id + ":onglet", "seul");
     choix = new Set(store.get(M.id + ":choix", M.groupes[0].t));
     document.body.insertAdjacentHTML("beforeend", `<div class="fb" id="fb"></div><div class="modal" id="modal"></div>`);

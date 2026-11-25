@@ -107,6 +107,7 @@ const MATIERE = (() => {
     id: "calculs", titre: "Calculs", icone: "🧮", couleur: "#c2255c", couleurFoncee: "#a61e4d",
     libSeul: "Une seule table", libChoix: "les tables", nbBase: 10, parFaute: 3,
     groupes: GROUPES, themes, generer,
+    duree: q => ({ saisie: 10, qcm: 8, vf: 6, tableau: 5 * (q.lignes || []).length + 4, relier: 5 * (q.paires || []).length + 3 })[q.type],
     fiche: [
       { titre: "Complète les tables", type: "tableau", n: 2 },
       { titre: "Calcule", type: "calcul", n: 10 },

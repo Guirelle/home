@@ -191,3 +191,20 @@ table.conj b.t{color:#e03131}
 
 input.rep.vide{border-color:#fab005;background:#fff9db}
 .msg-vide{color:#e67700;font-weight:800;margin:8px 0 0}
+
+/* sablier */
+.sablier{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 4px;font-weight:800}
+.sablier button{border:2px solid var(--gris);background:#fff;border-radius:20px;padding:6px 10px;font-weight:800;font-size:14px;color:var(--texte)}
+.sablier button.on{border-color:var(--m);background:var(--m);color:#fff}
+.vie{display:flex;align-items:center;gap:8px;margin:6px 0 4px}
+.vie .ic{font-size:22px}
+.vie .sec{font-weight:900;min-width:40px;text-align:right;color:#666}
+.vbar{flex:1;height:20px;border:3px solid #343a40;border-radius:12px;background:#fff;overflow:hidden}
+.vbar>div{height:100%;width:100%;border-radius:8px}
+.v-ok .vbar>div{background:linear-gradient(#69db7c,#2f9e44)}
+.v-moy .vbar>div{background:linear-gradient(#ffd43b,#f59f00)}
+.v-bas .vbar>div{background:linear-gradient(#ff8787,#e03131)}
+.v-bas .ic{animation:secoue .5s infinite}
+.opts button.bon,.vf button.bon{border-color:var(--vert);background:#ebfbee;color:var(--vert-f)}
+.opts button.mauvais,.vf button.mauvais{border-color:var(--rouge);background:#fff5f5;color:var(--rouge-f)}
+.opts button.eteint,.vf button.eteint{opacity:.45}
