@@ -1,5 +1,5 @@
 /* =====================================================================
-   MATIÈRE : Calcul mental (+ − × ÷, nombres entiers et à virgule)
+   MATIÈRE : Calcul mental (+ − × :, nombres entiers et à virgule)
    Niveau 1 : sans passage de la dizaine, le nombre cherché est le résultat
    Niveau 2 : sans passage de la dizaine, le nombre cherché est n'importe où
    Niveau 3 : avec passage de la dizaine, le nombre cherché est le résultat
@@ -10,11 +10,12 @@ const MATIERE = (() => {
   const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const R = x => Math.round(x * 10000) / 10000;
-  const fmt = x => String(R(x)).replace(".", ",");
-  const SIGNE = { "+": "+", "-": "−", "x": "×", "/": "÷" };
+  const fmt = x => (R(x) < 0 ? "−" : "") + String(Math.abs(R(x))).replace(".", ",");
+  const opd = (x, premier) => R(x) < 0 && !premier ? `(${fmt(x)})` : fmt(x); // un négatif au milieu d'un calcul se met entre parenthèses
+  const SIGNE = { "+": "+", "-": "−", "x": "×", "/": ":" };
   const NIV = ["sans passage de la dizaine", "nombre caché, sans passage", "avec passage de la dizaine", "nombre caché, avec passage"];
   const COUL = ["#2b8a3e", "#1971c2", "#e8590c", "#c2255c"];
-  const SORTES = { as: "+ et −", md: "× et ÷", dec: "Nombres à virgule" };
+  const SORTES = { as: "+ et −", md: "× et :", dec: "Nombres à virgule" };
   const GROUPES = [1, 2, 3, 4].map(n => ({ nom: `Niveau ${n} · ${NIV[n - 1]}`, c: COUL[n - 1], t: ["as", "md", "dec"].map(k => k + n) }));
   const decimal = x => R(x) !== Math.round(x);
   const nbDec = x => (String(R(x)).split(".")[1] || "").length;
@@ -92,6 +93,7 @@ const MATIERE = (() => {
       g += `<circle cx="${x}" cy="${y}" r="4" fill="#343a40"/><text x="${x}" y="${y + 18 + rang * 14}" font-size="12" text-anchor="middle" fill="#343a40" font-weight="700">${fmt(v)}</text>`; });
     let dl = -99, rl = 0;
     sauts.forEach(s => {
+      if (s.de === s.a) return; // simple repère (ex. le 0)
       const xa = X(s.de), xb = X(s.a), m = (xa + xb) / 2, h = Math.max(16, Math.min(46, Math.abs(xb - xa) * .55));
       const dir = xb >= xa ? 1 : -1;
       g += `<path d="M${xa} ${y - 3} Q ${m} ${y - 3 - 2 * h} ${xb} ${y - 3}" fill="none" stroke="var(--c,#7048e8)" stroke-width="2.5"/>`;
@@ -102,7 +104,7 @@ const MATIERE = (() => {
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" role="img" aria-label="Droite des nombres">${g}</svg>`;
   }
 
-  // tableau des rangs pour × et ÷ par 10, 100, 1000
+  // tableau des rangs pour × et : par 10, 100, 1000
   function rangs(x, y, op, p) {
     const k = Math.round(Math.log10(p)), cols = ["milliers", "centaines", "dizaines", "unités", "dixièmes", "centièmes", "millièmes", "dix-millièmes"];
     const pos = v => { const [e, d = ""] = String(R(v)).split("."); const m = {}; e.split("").reverse().forEach((c, i) => m[3 - i] = c); d.split("").forEach((c, i) => m[4 + i] = c); return m; };
@@ -110,12 +112,13 @@ const MATIERE = (() => {
     const lo = Math.min(...idx, 3), hi = Math.max(...idx, 3);
     const ligne = (m, lab) => `<tr><th>${lab}</th>${cols.slice(lo, hi + 1).map((_, i) => `<td class="${lo + i === 4 ? "vg" : ""}">${m[lo + i] !== undefined ? m[lo + i] : (lo + i === 3 ? "0" : "")}</td>`).join("")}</tr>`;
     return `<table class="rangs"><tr><th></th>${cols.slice(lo, hi + 1).map(c => `<th>${c}</th>`).join("")}</tr>${ligne(A, fmt(x))}${ligne(B, fmt(y))}</table>
-      <p>${op === "x" ? `× ${p} : chaque chiffre avance de <b>${k} rang${k > 1 ? "s" : ""} vers la gauche</b> (il vaut ${p} fois plus).` : `÷ ${p} : chaque chiffre recule de <b>${k} rang${k > 1 ? "s" : ""} vers la droite</b> (il vaut ${p} fois moins).`} Le trait rouge marque la virgule.</p>`;
+      <p>${op === "x" ? `× ${p} : chaque chiffre avance de <b>${k} rang${k > 1 ? "s" : ""} vers la gauche</b> (il vaut ${p} fois plus).` : `: ${p} : chaque chiffre recule de <b>${k} rang${k > 1 ? "s" : ""} vers la droite</b> (il vaut ${p} fois moins).`} Le trait rouge marque la virgule.</p>`;
   }
 
   /* ---------- explication d'un calcul x op y = z ---------- */
   function strategie(op, x, y) {
     const z = R(op === "+" ? x + y : op === "-" ? x - y : op === "x" ? x * y : x / y);
+    if (x < 0 || y < 0 || z < 0) return strategieZ(op, x, y, z);
     const B = (decimal(x) || decimal(y) || decimal(z)) && (op === "+" || op === "-") ? 1 : 10; // « dizaine » : 10, ou 1 unité pour les dixièmes
     const sauts = [], etapes = [];
     if (op === "+" || op === "-") {
@@ -146,12 +149,12 @@ const MATIERE = (() => {
     // division : combien de sauts de y pour arriver à x ?
     if (!decimal(z) && z <= 10) {
       let cur = 0; for (let i = 0; i < z; i++) { const n = R(cur + y); sauts.push({ de: cur, a: n, lab: "+" + fmt(y) }); cur = n; }
-      return { z, html: `<p>${fmt(x)} ÷ ${fmt(y)} : combien de <b>sauts de ${fmt(y)}</b> pour arriver à ${fmt(x)} ? On en compte <b>${fmt(z)}</b>.</p>${droite(sauts)}` };
+      return { z, html: `<p>${fmt(x)} : ${fmt(y)} : combien de <b>sauts de ${fmt(y)}</b> pour arriver à ${fmt(x)} ? On en compte <b>${fmt(z)}</b>.</p>${droite(sauts)}` };
     }
     const gros = decimal(z) ? Math.floor(z) : Math.floor(z / 10) * 10, petit = R(z - gros), v1 = R(gros * y);
     if (gros) sauts.push({ de: 0, a: v1, lab: `${fmt(gros)} × ${fmt(y)}` });
     sauts.push({ de: v1, a: x, lab: `${fmt(petit)} × ${fmt(y)}` });
-    return { z, html: `<p>${fmt(x)} ÷ ${fmt(y)} : on cherche combien de fois ${fmt(y)}. ${gros ? `${fmt(gros)} fois ${fmt(y)} = ${fmt(v1)}, ` : ""}il reste ${fmt(R(x - v1))} = ${fmt(petit)} fois ${fmt(y)}. Donc ${fmt(gros)} + ${fmt(petit)} = <b>${fmt(z)}</b>.</p>${droite(sauts)}` };
+    return { z, html: `<p>${fmt(x)} : ${fmt(y)} : on cherche combien de fois ${fmt(y)}. ${gros ? `${fmt(gros)} fois ${fmt(y)} = ${fmt(v1)}, ` : ""}il reste ${fmt(R(x - v1))} = ${fmt(petit)} fois ${fmt(y)}. Donc ${fmt(gros)} + ${fmt(petit)} = <b>${fmt(z)}</b>.</p>${droite(sauts)}` };
   }
   function explication(cal, manque) {
     const { op, a, b, c } = cal; let o2 = op, x = a, y = b, phrase = "";
@@ -160,7 +163,7 @@ const MATIERE = (() => {
     } else if (manque === "b") {
       if (op === "+") { o2 = "-"; x = c; y = a; } else if (op === "-") { o2 = "-"; x = a; y = c; } else if (op === "x") { o2 = "/"; x = c; y = a; } else { o2 = "/"; x = a; y = c; }
     }
-    if (manque !== "c") phrase = `<p>Le nombre caché se trouve avec l'<b>opération inverse</b> : on calcule <b>${fmt(x)} ${SIGNE[o2]} ${fmt(y)}</b>.</p>`;
+    if (manque !== "c") phrase = `<p>Le nombre caché se trouve avec l'<b>opération inverse</b> : on calcule <b>${opd(x, true)} ${SIGNE[o2]} ${opd(y)}</b>.</p>`;
     const st = strategie(o2, x, y);
     return phrase + st.html;
   }
@@ -168,10 +171,12 @@ const MATIERE = (() => {
   /* ---------- questions ---------- */
   const tagT = t => { const L = +t.slice(-1); return `<span class="tag" style="--c:${COUL[L - 1]}">${SORTES[t.slice(0, -1)]} · niveau ${L}</span>`; };
   function ecrire(cal, manque, rep) {
-    const v = { a: fmt(cal.a), b: fmt(cal.b), c: fmt(cal.c) }; v[manque] = rep;
+    const v = { a: opd(cal.a, true), b: opd(cal.b), c: fmt(cal.c) };
+    v[manque] = rep.includes("<b>") && R(cal[manque]) < 0 && manque === "b" ? `(${rep})` : rep;
     return `${v.a} ${SIGNE[cal.op]} ${v.b} = ${v.c}`;
   }
   function generer(t, o = {}) {
+    if (SEC[t]) return genSec(t, o);
     const L = +t.slice(-1), sorte = t.slice(0, -1);
     const cal = sorte === "as" ? tirAS(L) : sorte === "md" ? tirMD(L) : tirDEC(L);
     const manque = (L === 2 || L === 4) ? rnd(["a", "b", "c", "c"]) : "c";
@@ -198,13 +203,13 @@ const MATIERE = (() => {
   /* ---------- rappels et synthèses ---------- */
   const RAPPEL = {
     as1: "Sans passer la dizaine : dizaines avec dizaines, unités avec unités. 34 + 25 → 30 + 20 = 50 et 4 + 5 = 9 → 59.",
-    md1: "Ce sont les tables ! La division est le contraire de la multiplication : 42 ÷ 6 = ? ↔ 6 × ? = 42.",
+    md1: "Ce sont les tables ! La division est le contraire de la multiplication : 42 : 6 = ? ↔ 6 × ? = 42.",
     dec1: "Unités avec unités, dixièmes avec dixièmes : 3,2 + 1,5 = 4,7. × 10 : chaque chiffre avance d'un rang vers la gauche (2,5 × 10 = 25).",
     as3: "On passe par la dizaine : 37 + 8 = 37 + 3 + 5 = 45 · 52 − 7 = 52 − 2 − 5 = 45.",
-    md3: "On décompose : 23 × 4 = 20 × 4 + 3 × 4 = 80 + 12 = 92 · 84 ÷ 4 = 80 ÷ 4 + 4 ÷ 4 = 20 + 1 = 21.",
+    md3: "On décompose : 23 × 4 = 20 × 4 + 3 × 4 = 80 + 12 = 92 · 84 : 4 = 80 : 4 + 4 : 4 = 20 + 1 = 21.",
     dec3: "10 dixièmes = 1 unité : 2,7 + 0,5 = 2,7 + 0,3 + 0,2 = 3,2 · 1,2 × 3 = 3 sauts de 1,2 = 3,6."
   };
-  const INV = "<br><b>Nombre caché ?</b> Opération inverse : ? + 25 = 59 → 59 − 25 · ? − 7 = 45 → 45 + 7 · 6 × ? = 42 → 42 ÷ 6 · ? ÷ 4 = 21 → 21 × 4.";
+  const INV = "<br><b>Nombre caché ?</b> Opération inverse : ? + 25 = 59 → 59 − 25 · ? − 7 = 45 → 45 + 7 · 6 × ? = 42 → 42 : 6 · ? : 4 = 21 → 21 × 4.";
   const rappel = t => { const L = +t.slice(-1), s = t.slice(0, -1); return RAPPEL[s + (L <= 2 ? 1 : 3)] + (L === 2 || L === 4 ? INV : ""); };
   const EX = {
     1: { as: [["+", 34, 25], ["-", 58, 23]], md: [["x", 6, 4], ["/", 42, 6]], dec: [["+", 3.2, 1.5], ["-", 5.8, 2.3], ["x", 2.5, 10]] },
@@ -212,7 +217,7 @@ const MATIERE = (() => {
   };
   const PIEGES = {
     as: ["En soustraction, on enlève toujours au premier nombre : 52 − 7 = 45 (et pas 55).", "Vérifie avec l'opération inverse : 45 + 7 = 52 ✔"],
-    md: ["Une division se vérifie par une multiplication : 84 ÷ 4 = 21 car 21 × 4 = 84.", "× 10 n'est pas « ajouter un zéro » pour les nombres à virgule : 2,5 × 10 = 25."],
+    md: ["Une division se vérifie par une multiplication : 84 : 4 = 21 car 21 × 4 = 84.", "× 10 n'est pas « ajouter un zéro » pour les nombres à virgule : 2,5 × 10 = 25."],
     dec: ["10 dixièmes font 1 unité : 0,7 + 0,3 = 1.", "2,5 × 10 = 25 (et pas 2,50) : c'est la virgule qui bouge, pas un zéro qu'on ajoute.", "Avec un nombre entier, la virgule est cachée : 3 = 3,0 → 3 − 0,4 = 2,6."]
   };
   function synthese(t) {
@@ -222,13 +227,167 @@ const MATIERE = (() => {
     if (L === 2 || L === 4) h += `<section><h2>🕵️ Le nombre caché</h2><table class="term"><tr><th>Si on cherche…</th><th>on calcule</th></tr>
       <tr><td>? + 25 = 59</td><td>59 − 25 = 34</td></tr><tr><td>34 + ? = 59</td><td>59 − 34 = 25</td></tr>
       <tr><td>? − 7 = 45</td><td>45 + 7 = 52</td></tr><tr><td>52 − ? = 45</td><td>52 − 45 = 7</td></tr>
-      <tr><td>? × 6 = 42</td><td>42 ÷ 6 = 7</td></tr><tr><td>? ÷ 4 = 21</td><td>21 × 4 = 84</td></tr><tr><td>84 ÷ ? = 21</td><td>84 ÷ 21 = 4</td></tr></table></section>`;
+      <tr><td>? × 6 = 42</td><td>42 : 6 = 7</td></tr><tr><td>? : 4 = 21</td><td>21 × 4 = 84</td></tr><tr><td>84 : ? = 21</td><td>84 : 21 = 4</td></tr></table></section>`;
     h += `<section class="pieges"><h2>⚠️ Attention</h2><ul>${PIEGES[s].map(x => `<li>${x}</li>`).join("")}</ul></section>`;
     return h;
   }
 
+  /* ================= 1re SECONDAIRE ================= */
+  const SEC = {
+    z_as: { nom: "+ et − avec des négatifs", g: 4 }, z_md: { nom: "× et : avec des négatifs", g: 4 }, z_dec: { nom: "Décimaux négatifs (+ et −)", g: 4 },
+    carres: { nom: "Carrés de 1 à 15", g: 5 }, puis: { nom: "Puissances", g: 5 }, prio: { nom: "Priorités des opérations", g: 5 }, astuces: { nom: "Astuces ×5, ×9, ×11, ×25", g: 5 }
+  };
+  GROUPES.push({ nom: "1re secondaire · nombres négatifs", c: "#5f3dc4", t: ["z_as", "z_md", "z_dec"] },
+               { nom: "1re secondaire · puissances, priorités, astuces", c: "#364fc7", t: ["carres", "puis", "prio", "astuces"] });
+  const tagS = t => `<span class="tag" style="--c:${GROUPES[SEC[t].g].c}">${SEC[t].nom}</span>`;
+  const nz = (a, b) => { let x; do x = ri(a, b); while (x === 0); return x; };
+  const regleSignes = `<table class="rangs" style="font-size:16px"><tr><th>×  ou  :</th><th>+</th><th>−</th></tr><tr><th>+</th><td>+</td><td>−</td></tr><tr><th>−</th><td>−</td><td>+</td></tr></table>
+    <p><b>Mêmes signes → résultat positif. Signes différents → résultat négatif.</b></p>`;
+
+  // + et − dans Z : déplacements sur la droite (en passant par 0 si on le traverse)
+  function strategieZ(op, x, y, z) {
+    if (op === "x" || op === "/") {
+      const ax = Math.abs(x), ay = Math.abs(y), az = Math.abs(z), neg = z < 0;
+      let h = `<p>On calcule sans les signes : ${fmt(ax)} ${SIGNE[op]} ${fmt(ay)} = <b>${fmt(az)}</b>.<br>Puis le signe : ${x < 0 ? "−" : "+"} ${SIGNE[op]} ${y < 0 ? "−" : "+"} → <b>${neg ? "négatif" : "positif"}</b>, donc ${fmt(z)}.</p>` + regleSignes;
+      if (op === "x" && Number.isInteger(x) && Number.isInteger(y) && ((x < 0 && y > 0 && y <= 8) || (y < 0 && x > 0 && x <= 8))) {
+        const k = x > 0 ? x : y, m = x > 0 ? y : x, sauts = []; let cur = 0;
+        for (let i = 0; i < k; i++) { sauts.push({ de: cur, a: R(cur + m), lab: fmt(m) }); cur = R(cur + m); }
+        h += `<p>${fmt(k)} sauts de ${fmt(m)} à partir de 0 : on recule.</p>` + droite(sauts);
+      }
+      return { z, html: h };
+    }
+    let h = "", d = y;
+    if (op === "-") { d = R(-y); h += `<p>Soustraire, c'est <b>additionner l'opposé</b> : ${opd(x, true)} − ${opd(y)} = ${opd(x, true)} + ${opd(d)}.</p>`; }
+    const sauts = [], fin = R(x + d), signe = v => (v >= 0 ? "+" : "−") + fmt(Math.abs(v));
+    if (x !== 0 && fin !== 0 && Math.sign(x) !== Math.sign(fin)) { sauts.push({ de: x, a: 0, lab: signe(-x) }); sauts.push({ de: 0, a: fin, lab: signe(fin) }); }
+    else sauts.push({ de: x, a: fin, lab: signe(d) });
+    h += `<p>On part de <b>${fmt(x)}</b> et on ${d >= 0 ? "avance" : "recule"} de <b>${fmt(Math.abs(d))}</b>${sauts.length > 1 ? ` (en passant par 0 : ${fmt(Math.abs(x))} puis ${fmt(Math.abs(fin))})` : ""} → on arrive à <b>${fmt(fin)}</b>.</p>`;
+    const pts = sauts.concat(x !== 0 && fin !== 0 && sauts.length === 1 ? [{ de: 0, a: 0, lab: "" }] : []);
+    return { z, html: h + droite(pts.filter(s => s.de !== s.a || s.de === 0)) };
+  }
+
+  // évaluation pas à pas d'une expression (priorités des opérations)
+  const PRIO = { "^": 3, "x": 2, "/": 2, "+": 1, "-": 1 };
+  const N = v => ({ v }), O = (op, l, r, par) => ({ op, l, r, par });
+  function ecrit(n, premier = true) {
+    if (n.v !== undefined) return premier || n.v >= 0 ? fmt(n.v) : `(${fmt(n.v)})`;
+    if (n.op === "^") return `${ecrit(n.l)}<sup>${fmt(n.r.v)}</sup>`;
+    const s = `${ecrit(n.l, premier && !n.par)} ${SIGNE[n.op]} ${ecrit(n.r, false)}`;
+    return n.par ? `(${s})` : s;
+  }
+  const val = (op, a, b) => R(op === "+" ? a + b : op === "-" ? a - b : op === "x" ? a * b : op === "/" ? a / b : Math.pow(a, b));
+  function etapes(arbre) {
+    const lignes = [ecrit(arbre)];
+    const cands = (n, prof, out) => { if (n.v !== undefined) return; const p = prof + (n.par ? 1 : 0);
+      if (n.l.v !== undefined && n.r.v !== undefined) out.push({ n, p }); cands(n.l, p, out); cands(n.r, p, out); return out; };
+    let ordre = 0;
+    while (arbre.v === undefined) {
+      const c = cands(arbre, 0, []); c.forEach((x, i) => x.i = i);
+      c.sort((a, b) => b.p - a.p || PRIO[b.n.op] - PRIO[a.n.op] || a.i - b.i);
+      const n = c[0].n, marque = `<u>${ecrit({ op: n.op, l: n.l, r: n.r })}</u>`;
+      const v = val(n.op, n.l.v, n.r.v);
+      Object.keys(n).forEach(k => delete n[k]); n.v = v; ordre++;
+      lignes.push(ecrit(arbre)); lignes[lignes.length - 2] = lignes[lignes.length - 2] + `   <small>(${marque.replace(/<\/?u>/g, "")} = ${fmt(v)})</small>`;
+    }
+    return lignes;
+  }
+  function tirPrio() {
+    const a = ri(2, 9), b = ri(2, 9), c = ri(2, 9), d = ri(2, 6), neg = Math.random() < .3, m = neg ? -ri(2, 9) : ri(2, 9);
+    const T = [
+      () => O("+", N(a), O("x", N(b), N(c))), () => O("-", N(a * c + ri(1, 9)), O("x", N(b), N(c))),
+      () => O("x", O("+", N(a), N(b), true), N(c)), () => O("-", O("x", N(a), N(b)), O("x", N(c), N(d))),
+      () => O("+", N(a), O("^", N(b), N(2))), () => O("^", O("-", N(a + b), N(b), true), N(2)),
+      () => O("+", O("x", N(a), O("-", N(b + c), N(c), true)), N(d)), () => O("+", O("/", N(b * c), N(c)), N(a)),
+      () => O("-", O("^", N(a), N(2)), O("x", N(b), N(c))), () => O("+", O("x", N(m), N(b)), N(a)),
+      () => O("-", N(m), O("x", N(a), N(b))), () => O("x", N(m), O("-", N(a), N(b), true))
+    ];
+    return rnd(T)();
+  }
+  function astuce(k, a) {
+    const r = a * k;
+    if (k === 5) return `${a} × 5 = ${a} × 10 : 2 = ${a * 10} : 2 = <b>${r}</b>`;
+    if (k === 9) return `${a} × 9 = ${a} × 10 − ${a} = ${a * 10} − ${a} = <b>${r}</b>`;
+    if (k === 11) return `${a} × 11 = ${a} × 10 + ${a} = ${a * 10} + ${a} = <b>${r}</b>`;
+    return `${a} × 25 = ${a} × 100 : 4 = ${a * 100} : 4 = <b>${r}</b>`;
+  }
+  function puissanceExpl(b, e) {
+    if (e === 0) return `<p>Tout nombre (non nul) exposant 0 vaut <b>1</b> : ${b}<sup>0</sup> = 1.</p>`;
+    if (e === 1) return `<p>Exposant 1 : le nombre lui-même : ${b}<sup>1</sup> = <b>${b}</b>.</p>`;
+    const prod = Array(e).fill(b).join(" × "); let cur = b; const ch = [b];
+    for (let i = 1; i < e; i++) { cur *= b; ch.push(cur); }
+    let h = `<p>${b}<sup>${e}</sup>, c'est <b>${e} facteurs ${b}</b> : ${prod} = <b>${cur}</b><br>On multiplie pas à pas : ${ch.join(" → ")}.</p><p>⚠️ ${b}<sup>${e}</sup> n'est <b>pas</b> ${b} × ${e} = ${b * e}.</p>`;
+    if (e === 2 && b <= 12) h += `<p>Un carré, c'est un carré de points : ${b} rangées de ${b}.</p>` + carrePoints(b);
+    if (e === 3) h += `<p>Un cube : ${b} couches de ${b} × ${b} = ${b * b} petits cubes → ${b} × ${b * b} = ${cur}.</p>`;
+    return h;
+  }
+  function carrePoints(n) { const d = Math.min(14, Math.floor(180 / n)); let c = ""; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) c += `<circle cx="${j * d + d / 2}" cy="${i * d + d / 2}" r="${d * .36}" fill="var(--c,#364fc7)"/>`; return `<svg width="${n * d}" height="${n * d}" viewBox="0 0 ${n * d} ${n * d}">${c}</svg>`; }
+
+  function genSec(t, o) {
+    let ligne, valeur, expl, consigne = "Calcule", signe = false;
+    const fini = (ln, v, ex, extra = {}) => {
+      const q = Object.assign({ theme: t, type: "saisie", genre: t, numerique: true, decimal: true, signe: signe || v < 0, nombre: v, ok: [fmt(v)], ligne: ln,
+        solution: ln.replace("___", `<b>${opd(v, ln.trim().startsWith("___"))}</b>`), explication: ex, consigne,
+        enonce: tagS(t) + `<div class="big" style="font-size:28px">${ln}</div>` }, extra);
+      if (!o.papier && !o.type && Math.random() < .2) {
+        const d = new Set([-v, v + 1, v - 1, v + 2, v - 2, v * 10].map(R).filter(x => x !== R(v)));
+        Object.assign(q, { type: "qcm", genre: "qcm", options: shuffle([R(v), ...shuffle([...d]).slice(0, 3)]).map(fmt), bonne: [fmt(v)] }); delete q.nombre;
+      }
+      return q;
+    };
+    if (t === "z_as" || t === "z_md" || t === "z_dec") {
+      signe = true; let cal;
+      if (t === "z_as") { const a = nz(-20, 20), b = nz(-20, 20), op = rnd(["+", "-"]); cal = { op, a, b, c: R(op === "+" ? a + b : a - b) }; }
+      else if (t === "z_dec") { const a = R(nz(-99, 99) / 10), b = R(nz(-99, 99) / 10), op = rnd(["+", "-"]); cal = { op, a, b, c: R(op === "+" ? a + b : a - b) }; }
+      else { const x = nz(-10, 10), y = nz(-10, 10); if (Math.abs(x) === 1 && Math.random() < .7) return genSec(t, o);
+        cal = Math.random() < .5 ? { op: "x", a: x, b: y, c: x * y } : { op: "/", a: x * y, b: x, c: y };
+        if (cal.op === "/" && cal.a === 0) return genSec(t, o); }
+      const manque = Math.random() < .3 ? rnd(["a", "b"]) : "c";
+      if (manque !== "c") consigne = "Trouve le nombre caché";
+      return fini(ecrire(cal, manque, "___"), cal[manque], explication(cal, manque), { solution: ecrire(cal, manque, `<b>${fmt(cal[manque])}</b>`) });
+    }
+    if (t === "carres") {
+      const n = ri(1, 15);
+      if (Math.random() < .3) { consigne = "Quel nombre au carré ?"; return fini(`___<sup>2</sup> = ${n * n}`, n, puissanceExpl(n, 2)); }
+      return fini(`${n}<sup>2</sup> = ___`, n * n, puissanceExpl(n, 2));
+    }
+    if (t === "puis") {
+      let b, e; do { b = rnd([2, 2, 3, 3, 4, 5, 10, 10, 6, 7, 1, 0]); e = rnd([0, 1, 2, 2, 3, 3, 4, 5, 6]); } while (Math.pow(b, e) > 10000 || (b === 0 && e === 0));
+      if (b >= 2 && e >= 2 && Math.random() < .15) { consigne = "Trouve l'exposant"; return fini(`${b}<sup>?</sup> = ${Math.pow(b, e)} → exposant = ___`, e, puissanceExpl(b, e)); }
+      return fini(`${b}<sup>${e}</sup> = ___`, Math.pow(b, e), puissanceExpl(b, e));
+    }
+    if (t === "prio") {
+      const arbre = tirPrio(), ln = ecrit(arbre) + " = ___", ls = etapes(JSON.parse(JSON.stringify(arbre)));
+      const v = R(ls.length ? +(ls[ls.length - 1].replace("−", "-").replace(",", ".")) : 0);
+      const ordre = `<p>Ordre : <b>1.</b> parenthèses · <b>2.</b> puissances · <b>3.</b> × et : (de gauche à droite) · <b>4.</b> + et − (de gauche à droite)</p>`;
+      return fini(ln, v, ordre + `<ol style="list-style:none;padding-left:4px">${ls.map((l, i) => `<li>${i ? "= " : ""}${l}</li>`).join("")}</ol>`);
+    }
+    // astuces
+    const k = rnd([5, 9, 11, 25]), a = k === 25 ? ri(3, 40) : ri(12, 99);
+    return fini(`${a} × ${k} = ___`, a * k, `<p>${astuce(k, a)}</p>`);
+  }
+  const RAPPEL_SEC = {
+    z_as: "Sur la droite : + un positif → on avance ; + un négatif → on recule. Soustraire = additionner l'opposé : 3 − (−5) = 3 + 5 = 8.",
+    z_md: "Mêmes signes → positif, signes différents → négatif : (−4) × (−3) = 12 · (−20) : 4 = −5.",
+    z_dec: "Comme avec les entiers, sur la droite graduée : −2,5 + 4 = 1,5 · 1,2 − 3 = −1,8.",
+    carres: "n² = n × n : 11² = 121 · 12² = 144 · 13² = 169 · 14² = 196 · 15² = 225.",
+    puis: "aⁿ = a × a × … × a (n facteurs). 2⁵ = 32 (pas 10 !). a¹ = a, a⁰ = 1.",
+    prio: "1. parenthèses · 2. puissances · 3. × et : de gauche à droite · 4. + et − de gauche à droite.",
+    astuces: "× 5 = × 10 : 2 · × 9 = × 10 − le nombre · × 11 = × 10 + le nombre · × 25 = × 100 : 4."
+  };
+  function syntheseSec(t) {
+    const ex = { z_as: [["+", -4, 7], ["-", 3, -5], ["+", 2, -6]], z_md: [["x", 3, -4], ["/", -20, 4], ["x", -4, -3]], z_dec: [["+", -2.5, 4], ["-", 1.2, 3]] }[t];
+    let h = `<h1>${SEC[t].nom}</h1><section><h2>🎯 La règle</h2><p>${RAPPEL_SEC[t]}</p></section>`;
+    if (ex) h += `<section><h2>📏 Exemples sur la droite des nombres</h2>${ex.map(([op, x, y]) => { const st = strategie(op, x, y); return `<div class="explic"><b>${opd(x, true)} ${SIGNE[op]} ${opd(y)} = ${fmt(st.z)}</b>${st.html}</div>`; }).join("")}</section>`;
+    if (t === "carres") h += `<section><h2>📋 Les carrés à connaître</h2><table class="term">${Array.from({ length: 15 }, (_, i) => `<tr><td>${i + 1}<sup>2</sup> = ${i + 1} × ${i + 1}</td><td><b>${(i + 1) ** 2}</b></td></tr>`).join("")}</table></section><section><h2>🧱 Un carré, c'est un carré</h2>${carrePoints(5)}<p>5² = 25 points rangés en carré.</p></section>`;
+    if (t === "puis") h += `<section><h2>🔧 Exemples</h2><div class="explic">${puissanceExpl(2, 5)}</div><div class="explic">${puissanceExpl(3, 3)}</div><div class="explic">${puissanceExpl(10, 4)}<p>Puissance de 10 : l'exposant donne le nombre de zéros (10⁴ = 10 000).</p></div></section>`;
+    if (t === "prio") { const ar = O("-", O("x", N(3), O("+", N(2), N(4), true)), O("^", N(2), N(3))); h += `<section><h2>🔧 Un exemple pas à pas</h2><ol style="list-style:none">${etapes(ar).map((l, i) => `<li>${i ? "= " : ""}${l}</li>`).join("")}</ol></section>`; }
+    if (t === "astuces") h += `<section><h2>🔧 Pourquoi ça marche</h2><ul><li>${astuce(5, 46)} · car 5 = 10 : 2</li><li>${astuce(9, 37)} · car 9 = 10 − 1</li><li>${astuce(11, 24)} · car 11 = 10 + 1</li><li>${astuce(25, 28)} · car 25 = 100 : 4</li></ul></section>`;
+    h += `<section class="pieges"><h2>⚠️ Attention</h2><ul>${({ z_as: ["−3 − 5 = −8 (on recule encore), pas −2.", "Deux signes qui se suivent : on met des parenthèses : 4 + (−2)."], z_md: ["La règle des signes vaut pour × et : , PAS pour + et − : −3 − 4 = −7 (et pas 7)."], z_dec: ["Repère d'abord le signe du plus « grand » nombre (sans signe) : −2,5 + 4 → positif."], carres: ["n² ≠ n × 2 : 7² = 49 (pas 14)."], puis: ["2⁵ ≠ 2 × 5 ; 10³ = 1 000 (3 zéros) ; 5⁰ = 1."], prio: ["3 + 4 × 2 = 3 + 8 = 11 (pas 14) : la multiplication d'abord.", "Une puissance ne porte que sur le nombre juste avant : 2 × 3² = 2 × 9 = 18."], astuces: ["Vérifie l'ordre de grandeur : 37 × 9 doit être un peu moins que 37 × 10 = 370."] })[t].map(x => `<li>${x}</li>`).join("")}</ul></section>`;
+    return h;
+  }
+
   const themes = {};
-  GROUPES.forEach(g => g.t.forEach(t => themes[t] = { nom: SORTES[t.slice(0, -1)], rappel: rappel(t), synthese: () => synthese(t) }));
+  GROUPES.forEach(g => g.t.forEach(t => themes[t] = SEC[t] ? { nom: SEC[t].nom, rappel: RAPPEL_SEC[t], synthese: () => syntheseSec(t) } : { nom: SORTES[t.slice(0, -1)], rappel: rappel(t), synthese: () => synthese(t) }));
 
   return {
     id: "mental", titre: "Calcul mental", icone: "🧠", couleur: "#0c8599", couleurFoncee: "#0b7285",
@@ -238,7 +397,7 @@ const MATIERE = (() => {
     groupes: GROUPES, themes, generer,
     duree: q => ({ saisie: 20, qcm: 12 })[q.type],
     ficheGrille: { colonnes: 5, lignes: 20 },
-    _test: { strategie, explication, tirAS, tirMD, tirDEC, fmt }
+    _test: { strategie, explication, tirAS, tirMD, tirDEC, fmt, etapes, tirPrio, val, ecrit }
   };
 })();
 if (typeof module !== "undefined") module.exports = MATIERE;

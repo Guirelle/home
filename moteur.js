@@ -228,7 +228,7 @@ const Moteur = (() => {
     const clavier = () => numerique ? "" : clavierAcc();
     switch (q.type) {
       case "saisie":
-        if (q.enonce.includes("___")) return q.enonce.replace("___", champ("inline")) + clavier();
+        if (q.enonce.includes("___")) return q.enonce.replace("___", champ("inline") + (q.signe ? `<button class="pm" data-pm title="Changer le signe">±</button>` : "")) + clavier();
         return q.enonce + `<div class="row">${q.avant ? `<span>${q.avant}</span>` : ""}${champ()}${q.apres ? `<span>${q.apres}</span>` : ""}</div>` + clavier();
       case "qcm":
         return q.enonce.replace("___", `<span class="blank"></span>`) +
@@ -266,8 +266,8 @@ const Moteur = (() => {
     if (q.type === "saisie") {
       const inp = $("input.rep"); let v = norm(inp.value); if (!v) { inp.focus(); return; }
       if (q.nombre !== undefined) {
-        const x = parseFloat(inp.value.replace(/\s/g, "").replace(",", "."));
-        ok = !isNaN(x) && /^[0-9]*[.,]?[0-9]*$/.test(inp.value.replace(/\s/g, "")) && Math.abs(x - q.nombre) < 1e-9;
+        const brut = inp.value.replace(/\s/g, "").replace(/[−–—]/g, "-").replace(",", "."), x = parseFloat(brut);
+        ok = !isNaN(x) && /^-?[0-9]*\.?[0-9]*$/.test(brut) && Math.abs(x - q.nombre) < 1e-9;
         inp.classList.add(ok ? "ok-in" : "ko-in"); correction(ok, q); return;
       }
       if (q.avant) { const a = norm(q.avant); if (v.startsWith(a + " ")) v = v.slice(a.length + 1); else if (a.endsWith("'") && v.startsWith(a)) v = v.slice(a.length); }
@@ -462,6 +462,7 @@ const Moteur = (() => {
     if (d.acc !== undefined) { insere(d.acc); return; }
     if (d.l !== undefined) { if (b.classList.contains("fait") || fbOuvert) return; cur.relSel = +d.l; $$("[data-l]").forEach(x => x.classList.toggle("sel", x === b)); return; }
     if (d.r !== undefined) { relier(b); return; }
+    if ("pm" in d) { const i = $("input.rep"); if (i) { const v = i.value.trim(); i.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, "") : "−" + v; i.focus(); } return; }
     if ("check" in d) { verifier(); return; }
     if ("next" in d) { suivant(); return; }
     if ("rejouer" in d) { demarrer(S.themes); return; }

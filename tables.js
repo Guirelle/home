@@ -65,7 +65,7 @@ const MATIERE = (() => {
     },
     division(t) {
       const n = num(t); if (n === 1) throw 0; const k = rint(2, 10), r = n * k;
-      return { type: "saisie", numerique: true, consigne: "Divise (pense à la table !)", ligne: `${r} ÷ ${n} = ___`, enonce: tag(t) + big(`${r} ÷ ${n} = ___`), ok: [String(k)], solution: `${r} ÷ ${n} = <b>${k}</b> car ${n}${X}${k} = ${r}`, astuce: "Diviser, c'est chercher le nombre qui manque dans la multiplication." };
+      return { type: "saisie", numerique: true, consigne: "Divise (pense à la table !)", ligne: `${r} : ${n} = ___`, enonce: tag(t) + big(`${r} : ${n} = ___`), ok: [String(k)], solution: `${r} : ${n} = <b>${k}</b> car ${n}${X}${k} = ${r}`, astuce: "Diviser, c'est chercher le nombre qui manque dans la multiplication." };
     },
     qcm(t) {
       const n = num(t), f = facteurs(n), r = f.a * f.b;

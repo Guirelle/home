@@ -231,3 +231,7 @@ input.rep.vide{border-color:#fab005;background:#fff9db}
 .grille .num{font-size:10px;color:#666;min-width:20px}
 .zone.zg{min-width:3.6em;height:1.3em}
 @media print{.fiche.paysage{padding:0}}
+
+.pm{border:3px solid var(--m);background:#fff;color:var(--m);border-radius:12px;font-size:22px;font-weight:900;width:52px;height:50px;vertical-align:middle;margin-left:4px}
+.big sup{font-size:.6em}
+.explic u{text-decoration-color:var(--c);text-decoration-thickness:3px}
