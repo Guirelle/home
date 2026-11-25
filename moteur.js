@@ -188,10 +188,13 @@ const Moteur = (() => {
   }
 
   const ACC = ["é", "è", "ê", "à", "â", "ç", "î", "ï", "ô", "û", "ù", "ë", "'"];
-  const clavier = () => `<div class="accents">${ACC.map(c => `<button data-acc="${esc(c)}">${c}</button>`).join("")}</div>`;
-  const champ = (cls = "") => `<input class="rep ${cls}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
+  const clavierAcc = () => `<div class="accents">${ACC.map(c => `<button data-acc="${esc(c)}">${c}</button>`).join("")}</div>`;
+  let numerique = false; // vrai pour les réponses en nombres : clavier numérique, pas d'accents
+  const champ = (cls = "") => `<input class="rep ${cls}" ${numerique ? 'inputmode="numeric" pattern="[0-9]*"' : ""} autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
 
   function rendu(q) {
+    numerique = !!q.numerique;
+    const clavier = () => numerique ? "" : clavierAcc();
     switch (q.type) {
       case "saisie":
         if (q.enonce.includes("___")) return q.enonce.replace("___", champ("inline")) + clavier();
