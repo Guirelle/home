@@ -101,28 +101,59 @@ const MATIERE = (() => {
 
   /* ---------- droite des nombres ---------- */
   // sauts : [{de, a, lab}] ; dessine les sauts en arcs au-dessus d'une droite graduée
-  function droite(sauts) {
-    const W = 360, H = 132, y = 92, x0 = 18, x1 = W - 18;
+  function droite(sauts, unite) {
+    // graduations : petit trait à chaque « unité » du rang (1 ; 0,1 ; 0,01…), trait moyen tous les 5, grand trait + nombre tous les 10
+    const W = 560, H = 150, y = 100, x0 = 22, x1 = W - 22;
     const pts = [...new Set(sauts.flatMap(s => [R(s.de), R(s.a)]))].sort((p, q) => p - q);
-    let mn = pts[0], mx = pts[pts.length - 1]; if (mn === mx) mx = mn + 1;
+    let lo = pts[0], hi = pts[pts.length - 1]; if (lo === hi) hi = lo + 1;
+    unite = unite || Math.pow(10, -Math.max(...pts.map(nbDec)));
+    let pas = unite; while ((hi - lo) / pas > 60) pas *= 10;
+    pas = R(pas);
+    const mn = R(Math.floor(R(lo / pas) - 1) * pas), mx = R(Math.ceil(R(hi / pas) + 1) * pas);
     const X = v => x0 + (v - mn) / (mx - mn) * (x1 - x0);
-    const pas = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000].find(s => (mx - mn) / s <= 20) || 10000;
-    let g = `<line x1="${x0 - 8}" y1="${y}" x2="${x1 + 10}" y2="${y}" stroke="#495057" stroke-width="2"/><path d="M${x1 + 10} ${y} l-7 -4 v8z" fill="#495057"/>`;
-    for (let v = Math.ceil(mn / pas) * pas; v <= mx + 1e-9; v = R(v + pas)) g += `<line x1="${X(v)}" y1="${y - 4}" x2="${X(v)}" y2="${y + 4}" stroke="#adb5bd"/>`;
-    let dernier = -99, rang = 0;
-    pts.forEach(v => { const x = X(v); rang = x - dernier < 30 ? 1 - rang : 0; dernier = x;
-      g += `<circle cx="${x}" cy="${y}" r="4" fill="#343a40"/><text x="${x}" y="${y + 18 + rang * 14}" font-size="12" text-anchor="middle" fill="#343a40" font-weight="700">${fmt(v)}</text>`; });
+    const ecart = (x1 - x0) / ((mx - mn) / pas);
+    let g = `<line x1="${x0 - 6}" y1="${y}" x2="${x1 + 12}" y2="${y}" stroke="#495057" stroke-width="2"/><path d="M${x1 + 12} ${y} l-8 -5 v10z" fill="#495057"/>`;
+    const etiquettes = [];
+    for (let k = Math.round(mn / pas); k <= Math.round(mx / pas); k++) {
+      const v = R(k * pas), grand = k % 10 === 0, moyen = k % 5 === 0;
+      const h = grand ? 9 : moyen ? 6 : 4;
+      g += `<line x1="${X(v)}" y1="${y - h}" x2="${X(v)}" y2="${y + h}" stroke="${grand ? "#343a40" : "#868e96"}" stroke-width="${grand ? 2 : 1.5}"/>`;
+      if (grand || ecart >= 34) etiquettes.push({ v, gris: true });   // si la place le permet, chaque graduation a son nombre
+    }
+    pts.forEach(v => etiquettes.push({ v, gris: false }));
+    // étiquettes : les points du calcul en gras ; les nombres ronds en gris s'ils ne gênent pas
+    const pris = [];
+    etiquettes.sort((a, b) => a.gris - b.gris).forEach(e => {
+      const x = X(e.v); let rang = 0;
+      while (pris.some(p => p.rang === rang && Math.abs(p.x - x) < 34)) rang++;
+      if (e.gris && rang > 0) return;
+      pris.push({ x, rang });
+      if (!e.gris) g += `<circle cx="${x}" cy="${y}" r="5" fill="#343a40"/>`;
+      g += `<text x="${x}" y="${y + 24 + rang * 15}" font-size="${e.gris ? 12 : 13.5}" text-anchor="middle" fill="${e.gris ? "#868e96" : "#212529"}" font-weight="${e.gris ? 400 : 800}">${fmt(e.v)}</text>`;
+    });
     let dl = -99, rl = 0;
     sauts.forEach(s => {
-      if (s.de === s.a) return; // simple repère (ex. le 0)
-      const xa = X(s.de), xb = X(s.a), m = (xa + xb) / 2, h = Math.max(16, Math.min(46, Math.abs(xb - xa) * .55));
-      const dir = xb >= xa ? 1 : -1;
-      g += `<path d="M${xa} ${y - 3} Q ${m} ${y - 3 - 2 * h} ${xb} ${y - 3}" fill="none" stroke="var(--c,#7048e8)" stroke-width="2.5"/>`;
-      g += `<path d="M${xb} ${y - 3} l${-dir * 7} -5 l${dir * 1} 7z" fill="var(--c,#7048e8)"/>`;
-      rl = Math.abs(m - dl) < 34 ? 1 - rl : 0; dl = m;
-      g += `<text x="${m}" y="${y - 6 - h - rl * 13}" font-size="12.5" text-anchor="middle" fill="var(--c,#7048e8)" font-weight="800">${s.lab}</text>`;
+      if (s.de === s.a) return;
+      const xa = X(s.de), xb = X(s.a), m = (xa + xb) / 2, h = Math.max(16, Math.min(52, Math.abs(xb - xa) * .5)), dir = xb >= xa ? 1 : -1;
+      g += `<path d="M${xa} ${y - 4} Q ${m} ${y - 4 - 2 * h} ${xb} ${y - 4}" fill="none" stroke="var(--c,#7048e8)" stroke-width="2.5"/>`;
+      g += `<path d="M${xb} ${y - 4} l${-dir * 8} -5 l${dir * 1} 8z" fill="var(--c,#7048e8)"/>`;
+      rl = Math.abs(m - dl) < 40 ? 1 - rl : 0; dl = m;
+      g += `<text x="${m}" y="${y - 8 - h - rl * 14}" font-size="14" text-anchor="middle" fill="var(--c,#7048e8)" font-weight="800">${s.lab}</text>`;
     });
-    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" role="img" aria-label="Droite des nombres">${g}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px" role="img" aria-label="Droite des nombres">${g}</svg>`;
+  }
+
+  // calcul posé en colonnes : chaque chiffre dans son rang (sert quand il n'y a pas de passage)
+  function colonnes(x, y, z, op) {
+    const noms = { 3: "milliers", 2: "centaines", 1: "dizaines", 0: "unités", "-1": "dixièmes", "-2": "centièmes", "-3": "millièmes" };
+    const dmax = Math.max(nbDec(x), nbDec(y), nbDec(z)), emax = Math.max(...[x, y, z].map(v => String(Math.floor(Math.abs(v))).length)) - 1;
+    const chiffre = (v, e) => { const s = Math.round(Math.abs(v) * Math.pow(10, dmax)); const n = Math.floor(s / Math.pow(10, e + dmax)) % 10;
+      return (e > 0 && Math.abs(v) < Math.pow(10, e)) || (e < 0 && -e > nbDec(v)) ? "" : String(n); };
+    const rangs = []; for (let e = emax; e >= -dmax; e--) rangs.push(e);
+    const ligne = (v, sg) => `<tr><th>${sg}</th>${rangs.map(e => `<td class="${e === -1 ? "vg" : ""}">${chiffre(v, e)}</td>`).join("")}</tr>`;
+    const detail = rangs.filter(e => chiffre(y, e) !== "" && +chiffre(y, e)).map(e => `${noms[e]} : ${chiffre(x, e) || 0} ${op === "+" ? "+" : "−"} ${chiffre(y, e)} = ${chiffre(z, e)}`).join(" · ");
+    return `<table class="rangs"><tr><th></th>${rangs.map(e => `<th>${noms[e]}</th>`).join("")}</tr>${ligne(x, "")}${ligne(y, op === "+" ? "+" : "−")}<tr style="border-top:3px solid #343a40">${ligne(z, "=").slice(4)}</table>
+      <p>Pas de passage : on calcule <b>rang par rang</b>${detail ? " — " + detail : ""}. Résultat : <b>${fmt(z)}</b>.</p>${dmax ? "<p>Avec la virgule, on aligne les rangs : unités sous les unités, dixièmes sous les dixièmes…</p>" : ""}`;
   }
 
   // tableau des rangs pour × et : par 10, 100, 1000
@@ -156,7 +187,10 @@ const MATIERE = (() => {
         else if (sg < 0 && cd < dg && cd > 0) { const c1 = cd * p; saut(c1, `jusqu'à ${fmt((cur - c1) / Sc)}`); saut(q - c1, "le reste"); }
         else saut(q, nom(p));
       }
-      return { z, html: `<ol>${etapes.map(e => `<li>${e}</li>`).join("")}</ol>${droite(sauts)}` };
+      const passage = etapes.some(e => e.includes("jusqu'à"));
+      if (!passage && d === 0) return { z, html: colonnes(x, y, z, op) };                       // entiers sans passage : le tableau suffit
+      if (!passage) return { z, html: colonnes(x, y, z, op) };
+      return { z, html: `<ol>${etapes.map(e => `<li>${e}</li>`).join("")}</ol>${droite(sauts, 1 / Sc)}` };
     }
     const P = [10, 100, 1000];
     if (op === "x" && (P.includes(x) || P.includes(y))) { const p = P.includes(y) ? y : x, v = p === y ? x : y; return { z, html: rangs(v, z, "x", p) }; }
