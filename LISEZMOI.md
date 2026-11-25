@@ -4,18 +4,18 @@ Site d'entraînement pour les enfants (de la 3e primaire à la 1re secondaire), 
 
 ## Organisation des fichiers
 
+Tous les fichiers sont à la racine du dépôt, sans sous-dossier, pour qu'un simple glisser-déposer sur GitHub suffise :
+
 ```
-index.html              page de garde (les 9 matières)
-commun/
-  style.css             apparence commune
-  moteur.js             moteur commun (identique pour toutes les matières)
-  logo-aia.png          (à ajouter) logo « Aide de l'IA » affiché en pied de page
-conjugaison/
-  index.html            charge le moteur + les deux fichiers ci-dessous
-  conjugueur.js         données propres à la matière (ici : les verbes)
-  matiere.js            thèmes, règles, synthèses, générateur de questions
-orthographe/ …          même structure pour chaque nouvelle matière
+index.html            page de garde (les 9 matières)
+style.css, moteur.js  communs à toutes les matières
+logo-aia.png          (à ajouter) logo « Aide de l'IA »
+conjugaison.html      page de la matière
+conjugueur.js         données propres à la matière (les verbes)
+matiere.js            thèmes, règles, synthèses, générateur de questions
 ```
+
+Pour une nouvelle matière : `orthographe.html` et `orthographe.js`, et ainsi de suite.
 
 ## Ce que fait le moteur, pour toutes les matières
 

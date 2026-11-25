@@ -101,7 +101,7 @@ const Moteur = (() => {
 
   /* ---------- entête ---------- */
   function entete() {
-    return `<header class="top"><a href="../index.html" title="Accueil">🏠</a><h1>${M.icone} ${M.titre}</h1>
+    return `<header class="top"><a href="index.html" title="Accueil">🏠</a><h1>${M.icone} ${M.titre}</h1>
       <button data-son title="Son">${son ? "🔊" : "🔇"}</button></header>`;
   }
 
@@ -302,7 +302,7 @@ const Moteur = (() => {
     m.classList.add("on");
   }
   function fermerModal() { const m = $("#modal"); if (m) m.classList.remove("on"); }
-  const aia = () => `<img class="fiche-logo" src="../commun/logo-aia.png" alt="" onerror="this.remove()"> Aide de l'IA (AIA)`;
+  const aia = () => `<img class="fiche-logo" src="logo-aia.png" alt="" onerror="this.remove()"> Aide de l'IA (AIA)`;
 
   /* ---------- fiche imprimable ---------- */
   function preparerFiche(themes) { store.set(M.id + ":fiche", themes); F = null; aller("fiche"); }

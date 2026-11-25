@@ -3,14 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Conjugaison – Mon coin d'étude</title>
-<link rel="stylesheet" href="../commun/style.css">
+<title>Mon coin d'étude</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Nunito","Trebuchet MS","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:#343a40;
+  background:linear-gradient(160deg,#e7f5ff 0%,#f3f0ff 50%,#fff0f6 100%);min-height:100vh}
+header{text-align:center;padding:28px 16px 6px}
+header h1{margin:0;font-size:34px;letter-spacing:.5px}
+header h1 span{display:inline-block;animation:flotte 3s ease-in-out infinite}
+header p{margin:6px 0 0;color:#666;font-weight:700}
+@keyframes flotte{50%{transform:translateY(-6px) rotate(-4deg)}}
+main{max-width:860px;margin:0 auto;padding:18px 16px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.m{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;aspect-ratio:1/1;
+  background:#fff;border:4px solid var(--c);border-radius:24px;box-shadow:0 6px 0 var(--c);text-decoration:none;color:var(--texte,#343a40);
+  transition:transform .1s}
+.m:active{transform:translateY(4px);box-shadow:0 2px 0 var(--c)}
+.m .ic{font-size:52px}
+.m .n{font-weight:900;font-size:18px;color:var(--c)}
+.m.off{filter:grayscale(1);opacity:.55;pointer-events:none}
+.m .bientot{position:absolute;top:8px;right:8px;background:#495057;color:#fff;font-size:11px;font-weight:800;border-radius:8px;padding:2px 6px}
+footer{text-align:center;color:#868e96;font-size:13px;padding:0 16px 24px}
+footer img{height:22px;vertical-align:middle}
+</style>
 </head>
 <body>
-<div id="app"></div>
-<script src="../commun/moteur.js"></script>
-<script src="conjugueur.js"></script>
-<script src="matiere.js"></script>
-<script>Moteur.init(MATIERE);</script>
+<header>
+  <h1><span>📚</span> Mon coin d'étude</h1>
+  <p>Choisis une matière et c'est parti !</p>
+</header>
+<main>
+  <a class="m" style="--c:#7048e8" href="conjugaison.html"><span class="ic">✍️</span><span class="n">Conjugaison</span></a>
+  <a class="m off" style="--c:#1971c2"><span class="bientot">bientôt</span><span class="ic">🔤</span><span class="n">Orthographe</span></a>
+  <a class="m off" style="--c:#2b8a3e"><span class="bientot">bientôt</span><span class="ic">🧩</span><span class="n">Grammaire</span></a>
+  <a class="m off" style="--c:#e8590c"><span class="bientot">bientôt</span><span class="ic">🌷</span><span class="n">Néerlandais</span></a>
+  <a class="m off" style="--c:#0c8599"><span class="bientot">bientôt</span><span class="ic">📐</span><span class="n">Géométrie</span></a>
+  <a class="m off" style="--c:#c2255c"><span class="bientot">bientôt</span><span class="ic">🧮</span><span class="n">Calculs</span></a>
+  <a class="m off" style="--c:#a0522d"><span class="bientot">bientôt</span><span class="ic">🏰</span><span class="n">Histoire</span></a>
+  <a class="m off" style="--c:#5c940d"><span class="bientot">bientôt</span><span class="ic">🌍</span><span class="n">Géographie</span></a>
+  <a class="m off" style="--c:#6741d9"><span class="bientot">bientôt</span><span class="ic">🔬</span><span class="n">Sciences</span></a>
+</main>
+<footer><img src="logo-aia.png" alt="" onerror="this.remove()"> Aide de l'IA (AIA)</footer>
 </body>
 </html>
