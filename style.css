@@ -188,3 +188,6 @@ table.conj b.t{color:#e03131}
   .syn,.syn *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   @page{margin:14mm 13mm 16mm}
 }
+
+input.rep.vide{border-color:#fab005;background:#fff9db}
+.msg-vide{color:#e67700;font-weight:800;margin:8px 0 0}

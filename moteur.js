@@ -190,7 +190,7 @@ const Moteur = (() => {
   const ACC = ["é", "è", "ê", "à", "â", "ç", "î", "ï", "ô", "û", "ù", "ë", "'"];
   const clavierAcc = () => `<div class="accents">${ACC.map(c => `<button data-acc="${esc(c)}">${c}</button>`).join("")}</div>`;
   let numerique = false; // vrai pour les réponses en nombres : clavier numérique, pas d'accents
-  const champ = (cls = "") => `<input class="rep ${cls}" ${numerique ? 'inputmode="numeric" pattern="[0-9]*"' : ""} autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
+  const champ = (cls = "") => `<input class="rep ${cls}" ${numerique ? 'inputmode="numeric" pattern="[0-9]*"' : ""} enterkeyhint="next" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
 
   function rendu(q) {
     numerique = !!q.numerique;
@@ -229,7 +229,12 @@ const Moteur = (() => {
     } else if (q.type === "vf") {
       if (cur.sel == null) return; ok = (cur.sel === "1") === q.bonne;
     } else if (q.type === "tableau") {
-      const ins = $$(".tab-in input"); if (ins.every(i => !i.value.trim())) { ins[0].focus(); return; }
+      const ins = $$(".tab-in input"), vide = ins.find(i => !i.value.trim());
+      if (vide) { // pas de faute pour une case oubliée : on la montre
+        ins.forEach(i => i.classList.toggle("vide", !i.value.trim())); vide.focus();
+        const m = $(".msg-vide") || $(".tab-in").insertAdjacentElement("afterend", Object.assign(document.createElement("p"), { className: "msg-vide" }));
+        m.textContent = "Remplis toutes les cases avant de vérifier 🙂"; return;
+      }
       ok = true;
       ins.forEach((inp, i) => {
         const l = q.lignes[i]; let v = norm(inp.value); const a = norm(l.label.replace(/<[^>]+>/g, "").split("/")[0]);
@@ -430,8 +435,16 @@ const Moteur = (() => {
     document.addEventListener("mousedown", e => { if (e.target.closest("[data-acc]")) e.preventDefault(); });
     document.addEventListener("keydown", e => {
       if (e.key !== "Enter") return;
-      if (fbOuvert) { e.preventDefault(); suivant(); }
-      else if ($("[data-check]")) { e.preventDefault(); verifier(); }
+      if (fbOuvert) { e.preventDefault(); suivant(); return; }
+      const ins = $$(".tab-in input");
+      if (ins.length && e.target.matches(".tab-in input")) {
+        // tableau : Entrée passe à la case suivante ; on ne vérifie que quand tout est rempli
+        e.preventDefault();
+        const vide = ins.find(i => !i.value.trim());
+        if (vide) vide.focus(); else $("[data-check]").focus();
+        return;
+      }
+      if ($("[data-check]")) { e.preventDefault(); verifier(); }
     });
     addEventListener("hashchange", route);
     route();
