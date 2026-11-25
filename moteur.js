@@ -150,7 +150,7 @@ const Moteur = (() => {
     let h = entete() + `<main class="wrap">
       <div class="tabs"><button class="${onglet === "seul" ? "on" : ""}" data-tab="seul">🎯 ${M.libSeul || "Un seul thème"}</button>
       <button class="${onglet === "mix" ? "on" : ""}" data-tab="mix">🎲 Mélange</button></div>
-      ${(M.liens || []).map(l => `<a class="lien-page" style="--c:${l.c || M.couleur}" href="${l.href}"><span>${l.icone}</span><b>${l.titre}</b><small>${l.sous || ""}</small><i>→</i></a>`).join("")}
+      ${(M.liens || []).map(l => `<a class="lien-page" style="--c:${l.c || M.couleur}" href="${l.href}"><span>${l.icone}</span><span class="txt"><b>${l.titre}</b><small>${l.sous || ""}</small></span><i>→</i></a>`).join("")}
       <div class="sablier"><span>⏳ Sablier :</span>${Object.entries(VITESSES).map(([k, v]) => `<button class="${sablier === k ? "on" : ""}" data-sab="${k}">${v[0]} ${v[1]}</button>`).join("")}</div>`;
     if (onglet === "seul") {
       M.groupes.forEach(g => {

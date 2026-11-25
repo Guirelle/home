@@ -55,17 +55,17 @@ const MATIERE = (() => {
   const GEN = {
     calcul(t) {
       const n = num(t), f = facteurs(n), r = f.a * f.b;
-      return { type: "saisie", numerique: true, consigne: "Calcule", enonce: tag(t) + big(`${f.a}${X}${f.b} = ___`), ok: [String(r)], solution: `${f.a}${X}${f.b} = <b>${r}</b>` };
+      return { type: "saisie", numerique: true, consigne: "Calcule", ligne: `${f.a}${X}${f.b} = ___`, enonce: tag(t) + big(`${f.a}${X}${f.b} = ___`), ok: [String(r)], solution: `${f.a}${X}${f.b} = <b>${r}</b>` };
     },
     manquant(t) {
       const n = num(t), k = rint(2, 10), r = n * k;
       const avant = Math.random() < .5;
-      return { type: "saisie", numerique: true, consigne: "Trouve le nombre qui manque", enonce: tag(t) + big(avant ? `${n}${X}___ = ${r}` : `___${X}${n} = ${r}`), ok: [String(k)],
+      return { type: "saisie", numerique: true, consigne: "Trouve le nombre qui manque", ligne: avant ? `${n}${X}___ = ${r}` : `___${X}${n} = ${r}`, enonce: tag(t) + big(avant ? `${n}${X}___ = ${r}` : `___${X}${n} = ${r}`), ok: [String(k)],
         solution: avant ? `${n}${X}<b>${k}</b> = ${r}` : `<b>${k}</b>${X}${n} = ${r}` };
     },
     division(t) {
       const n = num(t); if (n === 1) throw 0; const k = rint(2, 10), r = n * k;
-      return { type: "saisie", numerique: true, consigne: "Divise (pense à la table !)", enonce: tag(t) + big(`${r} ÷ ${n} = ___`), ok: [String(k)], solution: `${r} ÷ ${n} = <b>${k}</b> car ${n}${X}${k} = ${r}`, astuce: "Diviser, c'est chercher le nombre qui manque dans la multiplication." };
+      return { type: "saisie", numerique: true, consigne: "Divise (pense à la table !)", ligne: `${r} ÷ ${n} = ___`, enonce: tag(t) + big(`${r} ÷ ${n} = ___`), ok: [String(k)], solution: `${r} ÷ ${n} = <b>${k}</b> car ${n}${X}${k} = ${r}`, astuce: "Diviser, c'est chercher le nombre qui manque dans la multiplication." };
     },
     qcm(t) {
       const n = num(t), f = facteurs(n), r = f.a * f.b;
@@ -93,7 +93,7 @@ const MATIERE = (() => {
 
   function generer(t, o = {}) {
     const W = { calcul: 4, manquant: 2, qcm: 2, vf: 1.2, relier: 1, tableau: .7, division: .8 };
-    let force = o.type;
+    let force = o.type || (o.grille ? rnd(["calcul", "calcul", "calcul", "manquant", "division"]) : undefined);
     for (let i = 0; i < 25; i++) {
       let ty = force;
       if (!ty) { const ks = Object.keys(W).filter(x => x !== o.eviter); let r = Math.random() * ks.reduce((s, x) => s + W[x], 0); ty = ks.find(x => (r -= W[x]) < 0) || ks[0]; }
@@ -106,8 +106,10 @@ const MATIERE = (() => {
   for (let n = 1; n <= 10; n++) themes["t" + n] = { nom: "Table de " + n, rappel: ASTUCE[n] + "<br><small>" + ligne(n) + "</small>", synthese: () => synthese("t" + n) };
 
   return {
-    id: "calculs", titre: "Calculs", icone: "🧮", couleur: "#c2255c", couleurFoncee: "#a61e4d",
+    id: "tables", titre: "Tables de multiplication", icone: "🧮", couleur: "#c2255c", couleurFoncee: "#a61e4d",
     libSeul: "Une seule table", libChoix: "les tables", nbBase: 10, parFaute: 3,
+    retour: { href: "calcul-mental.html", titre: "Calcul mental" },
+    ficheGrille: { colonnes: 5, lignes: 20 },
     groupes: GROUPES, themes, generer,
     duree: q => ({ saisie: 10, qcm: 8, vf: 6, tableau: 5 * (q.lignes || []).length + 4, relier: 5 * (q.paires || []).length + 3 })[q.type],
     fiche: [
