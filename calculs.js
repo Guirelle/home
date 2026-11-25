@@ -59,7 +59,9 @@ const MATIERE = (() => {
     },
     manquant(t) {
       const n = num(t), k = rint(2, 10), r = n * k;
-      return { type: "saisie", numerique: true, consigne: "Trouve le nombre qui manque", enonce: tag(t) + big(Math.random() < .5 ? `${n}${X}___ = ${r}` : `___${X}${n} = ${r}`), ok: [String(k)], solution: `${n}${X}<b>${k}</b> = ${r}` };
+      const avant = Math.random() < .5;
+      return { type: "saisie", numerique: true, consigne: "Trouve le nombre qui manque", enonce: tag(t) + big(avant ? `${n}${X}___ = ${r}` : `___${X}${n} = ${r}`), ok: [String(k)],
+        solution: avant ? `${n}${X}<b>${k}</b> = ${r}` : `<b>${k}</b>${X}${n} = ${r}` };
     },
     division(t) {
       const n = num(t); if (n === 1) throw 0; const k = rint(2, 10), r = n * k;

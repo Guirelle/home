@@ -128,7 +128,7 @@ const Moteur = (() => {
 
   /* ---------- entête ---------- */
   function entete() {
-    return `<header class="top"><a href="index.html" title="Accueil">🏠</a><h1>${M.icone} ${M.titre}</h1>
+    return `<header class="top">${M.retour ? `<a href="${M.retour.href}" title="${M.retour.titre}">←</a>` : ""}<a href="index.html" title="Accueil">🏠</a><h1>${M.icone} ${M.titre}</h1>
       <button data-son title="Son">${son ? "🔊" : "🔇"}</button></header>`;
   }
 
@@ -150,6 +150,7 @@ const Moteur = (() => {
     let h = entete() + `<main class="wrap">
       <div class="tabs"><button class="${onglet === "seul" ? "on" : ""}" data-tab="seul">🎯 ${M.libSeul || "Un seul thème"}</button>
       <button class="${onglet === "mix" ? "on" : ""}" data-tab="mix">🎲 Mélange</button></div>
+      ${(M.liens || []).map(l => `<a class="lien-page" style="--c:${l.c || M.couleur}" href="${l.href}"><span>${l.icone}</span><b>${l.titre}</b><small>${l.sous || ""}</small><i>→</i></a>`).join("")}
       <div class="sablier"><span>⏳ Sablier :</span>${Object.entries(VITESSES).map(([k, v]) => `<button class="${sablier === k ? "on" : ""}" data-sab="${k}">${v[0]} ${v[1]}</button>`).join("")}</div>`;
     if (onglet === "seul") {
       M.groupes.forEach(g => {
@@ -220,10 +221,10 @@ const Moteur = (() => {
   const ACC = ["é", "è", "ê", "à", "â", "ç", "î", "ï", "ô", "û", "ù", "ë", "'"];
   const clavierAcc = () => `<div class="accents">${ACC.map(c => `<button data-acc="${esc(c)}">${c}</button>`).join("")}</div>`;
   let numerique = false; // vrai pour les réponses en nombres : clavier numérique, pas d'accents
-  const champ = (cls = "") => `<input class="rep ${cls}" ${numerique ? 'inputmode="numeric" pattern="[0-9]*"' : ""} enterkeyhint="next" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
+  const champ = (cls = "") => `<input class="rep ${cls}" ${numerique === "decimal" ? 'inputmode="decimal"' : numerique ? 'inputmode="numeric" pattern="[0-9]*"' : ""} enterkeyhint="next" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">`;
 
   function rendu(q) {
-    numerique = !!q.numerique;
+    numerique = q.decimal ? "decimal" : !!q.numerique;
     const clavier = () => numerique ? "" : clavierAcc();
     switch (q.type) {
       case "saisie":
@@ -246,13 +247,31 @@ const Moteur = (() => {
     return "";
   }
 
+  /* Réponse acceptée : la forme seule, ou recopiée avec le début et/ou la fin de la phrase */
+  function contexte(q) {
+    if (q._ctx) return q._ctx;
+    const d = document.createElement("div");
+    d.innerHTML = q.enonce.replace(/<span class="(tag|inf)"[^>]*>.*?<\/span>/g, "").replace(/<div class="(src|arrow)"[^>]*>.*?<\/div>/g, "");
+    const parts = d.textContent.split("___");
+    return q._ctx = parts.length === 2 ? [norm(parts[0]), norm(parts[1])] : [norm(q.avant || ""), norm(q.apres || "")];
+  }
+  function accepte(q, a, v) {
+    const r = norm(a); if (v === r) return true;
+    const [av, ap] = contexte(q), j = (...x) => norm(x.filter(Boolean).join(" ").replace(/' /g, "'"));
+    return [j(av, r, ap), j(av, r), j(r, ap)].includes(v);
+  }
   function verifier() {
     if (fbOuvert) return;
     const q = S.liste[S.i]; let ok;
     if (q.type === "saisie") {
       const inp = $("input.rep"); let v = norm(inp.value); if (!v) { inp.focus(); return; }
+      if (q.nombre !== undefined) {
+        const x = parseFloat(inp.value.replace(/\s/g, "").replace(",", "."));
+        ok = !isNaN(x) && /^[0-9]*[.,]?[0-9]*$/.test(inp.value.replace(/\s/g, "")) && Math.abs(x - q.nombre) < 1e-9;
+        inp.classList.add(ok ? "ok-in" : "ko-in"); correction(ok, q); return;
+      }
       if (q.avant) { const a = norm(q.avant); if (v.startsWith(a + " ")) v = v.slice(a.length + 1); else if (a.endsWith("'") && v.startsWith(a)) v = v.slice(a.length); }
-      ok = q.ok.some(a => norm(a) === v);
+      ok = q.ok.some(a => accepte(q, a, v));
       inp.classList.add(ok ? "ok-in" : "ko-in");
     } else if (q.type === "qcm") {
       if (cur.sel == null) return; ok = q.bonne.includes(q.options[cur.sel]);
@@ -269,7 +288,7 @@ const Moteur = (() => {
       ins.forEach((inp, i) => {
         const l = q.lignes[i]; let v = norm(inp.value); const a = norm(l.label.replace(/<[^>]+>/g, "").split("/")[0]);
         if (v.startsWith(a + " ")) v = v.slice(a.length + 1);
-        const b = l.ok.some(x => norm(x) === v); inp.classList.add(b ? "ok-in" : "ko-in"); if (!b) ok = false;
+        const b = l.ok.some(x => norm(x) === v || norm(l.label.replace(/<[^>]+>/g, "") + " " + x) === v); inp.classList.add(b ? "ok-in" : "ko-in"); if (!b) ok = false;
       });
     } else if (q.type === "relier") ok = cur.err === 0;
     correction(ok, q);
@@ -293,6 +312,7 @@ const Moteur = (() => {
       h += horsTemps ? `<h3>⏰ Temps écoulé !</h3>` : `<h3>Oups ! 😬</h3>`;
       h += `<p><b>Bonne réponse :</b> ${q.solution || ""}</p>`;
       h += `<div class="rappel" style="--c:${c}">📘 <b>Rappel – ${th.nom}</b><br>${th.rappel}</div>`;
+      if (q.explication) h += `<div class="explic" style="--c:${c}">🔍 <b>Explication</b>${q.explication}</div>`;
       if (q.astuce) h += `<p>💡 ${q.astuce}</p>`;
       h += `<p><button class="lien" data-synmodal="${q.theme}">Voir la feuille de synthèse complète</button></p>`;
       const n = M.parFaute || 3;
@@ -387,8 +407,26 @@ const Moteur = (() => {
       default: return q.solution || q.ok[0];
     }
   }
+  function vueFicheGrille(themes) {
+    const g = M.ficheGrille, n = g.colonnes * g.lignes;
+    if (!F || F.themes.join() !== themes.join()) {
+      const saveS = S; S = { themes }; let ordre = [], items = [];
+      for (let i = 0; i < n; i++) { if (!ordre.length) ordre = shuffle(themes); try { items.push(genQ(ordre.pop(), { papier: true, grille: true })); } catch (e) {} }
+      S = saveS; F = { themes, items };
+    }
+    const noms = themes.map(t => M.themes[t].nom).join(" · ");
+    const grille = rep => `<div class="grille" style="grid-template-columns:repeat(${g.colonnes},1fr)">${Array.from({ length: g.colonnes }, (_, c) =>
+      `<div class="col">${F.items.slice(c * g.lignes, (c + 1) * g.lignes).map((q, i) => `<div class="cl"><span class="num">${c * g.lignes + i + 1}.</span> ${q.ligne.replace("___", rep ? `<b>${q.ok[0]}</b>` : `<span class="zone zg"></span>`)}</div>`).join("")}</div>`).join("")}</div>`;
+    app().innerHTML = `<style>@page{size:A4 landscape;margin:9mm 10mm}</style>
+      <div class="barre-outils noprint" style="max-width:1100px;margin:10px auto;padding:0 16px">
+      <a href="#">← Menu</a><button data-print>🖨 Imprimer (paysage)</button><button data-newfiche>🔄 Nouvelle fiche</button></div>
+      <div class="fiche paysage"><div class="entete-g"><b>${M.icone} ${M.titre} – ${n} calculs</b><span>${noms}</span><span>Nom : ……………………</span><span>Date : …………</span><span>Score : …… / ${n}</span></div>
+      ${grille(false)}<div class="saut"></div><div class="entete-g"><b>Corrigé</b><span>${noms}</span></div>${grille(true)}
+      <p style="text-align:right;font-size:11px;margin:4px 0 0">${aia()}</p></div>`;
+  }
   function vueFiche() {
     const themes = store.get(M.id + ":fiche", []); if (!themes.length) return vueMenu();
+    if (M.ficheGrille) return vueFicheGrille(themes);
     if (!F || F.themes.join() !== themes.join()) F = construireFiche(themes);
     const noms = themes.map(t => M.themes[t].nom).join(", ");
     let h = `<div class="barre-outils noprint" style="max-width:800px;margin:10px auto;padding:0 16px">
@@ -484,5 +522,5 @@ const Moteur = (() => {
     addEventListener("hashchange", route);
     route();
   }
-  return { init, norm, shuffle, rnd, _debug: () => ({ S, M }) };
+  return { init, norm, shuffle, rnd, _debug: () => ({ S, M }), _accepte: accepte };
 })();

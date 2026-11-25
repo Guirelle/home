@@ -208,3 +208,26 @@ input.rep.vide{border-color:#fab005;background:#fff9db}
 .opts button.bon,.vf button.bon{border-color:var(--vert);background:#ebfbee;color:var(--vert-f)}
 .opts button.mauvais,.vf button.mauvais{border-color:var(--rouge);background:#fff5f5;color:var(--rouge-f)}
 .opts button.eteint,.vf button.eteint{opacity:.45}
+
+/* liens vers une sous-page */
+.lien-page{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:12px 16px;background:#fff;border:3px solid var(--c);border-radius:18px;box-shadow:0 4px 0 var(--c);text-decoration:none;color:var(--texte)}
+.lien-page span{font-size:30px}.lien-page b{font-size:18px;color:var(--c)}.lien-page small{flex:1;color:#868e96}.lien-page i{font-style:normal;font-size:24px;color:var(--c)}
+/* explication détaillée */
+.explic{background:#fff;border-radius:14px;padding:10px 12px;margin:8px 0;border-left:6px solid var(--c,#999);font-size:16px}
+.explic svg{display:block;max-width:100%;height:auto;margin:6px auto}
+.explic ol{margin:4px 0;padding-left:22px}
+.rangs{border-collapse:collapse;margin:6px auto;font-size:15px}
+.rangs th,.rangs td{border:1px solid #ced4da;padding:3px 7px;text-align:center;min-width:26px}
+.rangs th{background:#f1f3f5;font-size:11px}
+.rangs td.vg{border-left:3px solid #e03131}
+/* fiche de calculs en paysage */
+.fiche.paysage{max-width:1100px;padding:10px 16px}
+.entete-g{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:6px;font-size:14px}
+.entete-g b{font-size:16px}
+.grille{display:grid;gap:0 14px}
+.grille .col{border-right:1px solid #bbb;padding-right:8px}
+.grille .col:last-child{border-right:none}
+.grille .cl{height:8.2mm;display:flex;align-items:center;gap:4px;font-size:14.5px;white-space:nowrap;border-bottom:1px dotted #ddd}
+.grille .num{font-size:10px;color:#666;min-width:20px}
+.zone.zg{min-width:3.6em;height:1.3em}
+@media print{.fiche.paysage{padding:0}}
